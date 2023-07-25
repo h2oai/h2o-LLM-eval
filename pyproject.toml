@@ -1,0 +1,53 @@
+[tool.poetry]
+name = "llm-eval"
+version = "0.1.0"
+description = "This project will help in evaluating LLMs"
+authors = ["srini-x <srini-x@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{ include = "llm_eval" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+loguru = "^0.7.0"
+psycopg = { extras = ["binary"], version = "^3.1.9" }
+emoji = "^2.2.0"
+python-dotenv = { extras = ["cli"], version = "^1.0.0" }
+h2o-wave = "^0.26.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = { version = "^7.3.2", allow-prereleases = true }
+pylint = { version = "^3.0.0a6", allow-prereleases = true }
+flake8 = { version = "^6.0.0", allow-prereleases = true }
+black = { extras = ["d"], version = "^23.3.0", allow-prereleases = true }
+
+[tool.black]
+line-length = 88
+skip-string-normalization = false
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | notebooks
+  | local
+)
+'''
+
+[tool.isort]
+line_length = 88
+multi_line_output = 3
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
