@@ -537,3 +537,146 @@ async def get_model_id_by_name(model_name: str) -> UUID:
         db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
     )
     return rows[0][0]
+
+
+async def get_all_unevaluated_ab_test_prompts_for_benchmark(benchmark_name: str, eval_model_name: str) -> list[dict]:
+    sql_select_from = f"""
+    SELECT
+        ab.ab_test_id,
+        ab.model_a,
+        ab.model_b,
+        ma.model_id,
+        ma.model_name,
+        mb.model_id,
+        mb.model_name,
+        ra.response_temp_id,
+        ra.response_text,
+        rb.response_temp_id,
+        rb.response_text,
+        p.prompt_text,
+        em.model_id,
+        em.model_name
+    FROM
+        ab_test AS ab
+        JOIN model AS ma ON ab.model_a = ma.model_id
+        JOIN model AS mb ON ab.model_b = mb.model_id
+        CROSS JOIN prompt_v1 AS p
+        JOIN response_temp AS ra ON ab.model_a = ra.created_by_model AND p.prompt_id = ra.prompt_id
+        JOIN response_temp AS rb ON ab.model_b = rb.created_by_model AND p.prompt_id = rb.prompt_id
+        JOIN benchmark AS b ON p.benchmark_id = b.benchmark_id
+        CROSS JOIN model as em
+    WHERE
+        b.benchmark_name = 'v1'
+        AND ma.use_in_ab_tests = TRUE
+        AND mb.use_in_ab_tests = TRUE
+        AND em.model_name = 'gpt-4-0613'
+        AND NOT EXISTS (SELECT e.prompt_id, e.ab_test_id
+                       FROM   eval_by_model AS e
+                            JOIN model AS m ON e.submitted_by = m.model_id
+                       WHERE  e.ab_test_id = ab.ab_test_id AND
+                              e.prompt_id = p.prompt_id AND
+                              e.submitted_by = em.model_id)
+    
+    """
+    rows = await select_from(
+        db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
+    )
+    return rows
+
+
+async def insert_eval_by_model_into_db(
+    ab_test_id: UUID,
+    model_a: UUID,
+    model_b: UUID,
+    prompt_id: UUID,
+    submitted_by: UUID,
+    submitted_at: datetime,
+    selected_model: Optional[UUID] = None,
+    other_response: Optional[str] = None,
+    additional_feedback: Optional[str] = None,
+    prompt_tokens: Optional[int] = None,
+    response_tokens: Optional[int] = None,
+    model_a_score: Optional[int] = None,
+    model_b_score: Optional[int] = None,
+    best_answer: Optional[str] = None,
+) -> UUID:
+    sql_insert_into = """
+    INSERT INTO eval_by_model (
+        eval_by_model_id,
+        ab_test_id,
+        model_a,
+        model_b,
+        prompt_id,
+        submitted_by,
+        selected_model,
+        other_response,
+        additional_feedback,
+        prompt_tokens,
+        response_tokens,
+        model_a_score,
+        model_b_score,
+        best_answer,
+        submitted_at
+    )
+    VALUES (
+        %(eval_by_model_id)s,
+        %(ab_test_id)s,
+        %(model_a)s,
+        %(model_b)s,
+        %(prompt_id)s,
+        %(submitted_by)s,
+        %(selected_model)s,
+        %(other_response)s,
+        %(additional_feedback)s,
+        %(prompt_tokens)s,
+        %(response_tokens)s,
+        %(model_a_score)s,
+        %(model_b_score)s,
+        %(best_answer)s,
+        %(submitted_at)s
+    );
+    """
+    eval_by_model_id = uuid4()
+    values = dict(
+        eval_by_model_id=eval_by_model_id,
+        ab_test_id=ab_test_id,
+        model_a=model_a,
+        model_b=model_b,
+        prompt_id=prompt_id,
+        submitted_by=submitted_by,
+        selected_model=selected_model,
+        other_response=other_response,
+        additional_feedback=additional_feedback,
+        prompt_tokens=prompt_tokens,
+        response_tokens=response_tokens,
+        model_a_score=model_a_score,
+        model_b_score=model_b_score,
+        best_answer=best_answer,
+        submitted_at=submitted_at,
+    )
+    await insert_into(
+        db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
+    )
+    return eval_by_model_id
+
+
+async def is_eval_by_model_in_db(
+    eval_model_id: UUID,
+    prompt_id: UUID,
+    ab_test_id: UUID,
+) -> bool:
+    sql_select_from = f"""
+    SELECT
+        *
+    FROM
+        eval_by_model
+    WHERE
+        submitted_by = '{eval_model_id}'
+        AND prompt_id = '{prompt_id}'
+        AND ab_test_id = '{ab_test_id}'
+    LIMIT
+        1;
+    """
+    rows = await select_from(db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from)
+    return True if rows else False
+
