@@ -6,12 +6,8 @@ import datetime
 def db_game_to_dict(row: tuple) -> dict:
     return {
         "ab_test_id": row[0],
-        "model_a": row[1],
-        "model_b": row[2],
-        "model_a_id": row[3],
-        "model_a_name": row[4],
-        "model_b_id": row[5],
-        "model_b_name": row[6],
+        "model_a_id": row[1],
+        "model_b_id": row[2],
         "response_a_id": row[7],
         "response_a_text": row[8],
         "response_b_id": row[9],
@@ -51,19 +47,18 @@ def games_list_to_lookup(games: list[dict]) -> dict:
     return lookup
 
 
-def parse_result_to_battle(result: tuple[dict], games_lookup: dict) -> dict:
+def parse_result_to_eval_entry(result: tuple[dict], games_lookup: dict) -> dict:
     input, output = result
     game_id = input["user"]
     game = games_lookup[game_id]
 
-    eval_model_name = input["model"]
     tstamp = output["created"]
 
     output_text = output["choices"][0]["message"]["content"]
     output_json = json.loads(output_text, strict=False)
 
-    model_a = game["model_a_name"]
-    model_b = game["model_b_name"]
+    model_a = game["model_a_id"]
+    model_b = game["model_b_id"]
 
     winner = output_json["choice"]
     if winner == "model_a":
@@ -83,49 +78,27 @@ def parse_result_to_battle(result: tuple[dict], games_lookup: dict) -> dict:
 
     reason = output_json.get("reason")
 
-    try:
-        prompt_tokens = output["usage"]["prompt_tokens"]
-        response_tokens = output["usage"]["completion_tokens"]
-    except KeyError as e:
-        print(e, output.keys())
-        if "usage" in output:
-            print(output["usage"].keys())
-        prompt_tokens = None
-        response_tokens = None
-
     return {
-        "game_id": game_id,
-        "eval_model_name": eval_model_name,
-        'model_a': model_a,
-        'model_b': model_b,
-        'win': winner,
-        'score_a': score_a,
-        'score_b': score_b,
-        'other_response': None,
-        'additional_feedback': reason,
-        'prompt_tokens': prompt_tokens,
-        'response_tokens': response_tokens,
-        'submitted_at': tstamp,
-    }
-
-
-def battle_to_eval_entry(battle: dict, games_lookup: dict) -> dict:
-    game = games_lookup[battle["game_id"]]
-    eval_entry = {
         "ab_test_id": game["ab_test_id"],
         "model_a": game["model_a_id"],
         "model_b": game["model_b_id"],
         "prompt_id": game["prompt_id"],
         "submitted_by": game["eval_model_id"],
-        "selected_model": game["model_a_id"] if battle["win"] == game["model_a_name"] else game["model_b_id"],
-        "other_response": battle["other_response"],
-        "additional_feedback": battle["additional_feedback"],
-        "prompt_tokens": battle["prompt_tokens"],
-        "response_tokens": battle["response_tokens"],
-        "model_a_score": battle["score_a"],
-        "model_b_score": battle["score_b"],
+        "selected_model": winner,
+        "additional_feedback": reason,
+        "model_a_score": score_a,
+        "model_b_score": score_b,
         "best_answer": None,
-        "submitted_at": datetime.datetime.fromtimestamp(battle["submitted_at"]),
+        "submitted_at": datetime.datetime.fromtimestamp(tstamp),
     }
-    return eval_entry
+
+
+def db_battle_to_dict(db_battle: list[tuple]) -> dict:
+    battle = {
+        'model_a': db_battle[0],
+        'model_b': db_battle[1],
+        'win': db_battle[2],
+        'submitted_at': db_battle[3],
+    }
+    return battle
 

@@ -546,13 +546,9 @@ async def get_all_unevaluated_ab_test_prompts_for_benchmark(benchmark_name: str,
         ab.ab_test_id,
         ab.model_a,
         ab.model_b,
-        ma.model_id,
-        ma.model_name,
-        mb.model_id,
-        mb.model_name,
-        ra.response_temp_id,
+        ra.response_id,
         ra.response_text,
-        rb.response_temp_id,
+        rb.response_id,
         rb.response_text,
         p.prompt_id,
         p.prompt_text,
@@ -562,16 +558,12 @@ async def get_all_unevaluated_ab_test_prompts_for_benchmark(benchmark_name: str,
         ab_test AS ab
         JOIN model AS ma ON ab.model_a = ma.model_id
         JOIN model AS mb ON ab.model_b = mb.model_id
-        CROSS JOIN prompt_v1 AS p
-        JOIN response_temp AS ra ON ab.model_a = ra.created_by_model AND p.prompt_id = ra.prompt_id
-        JOIN response_temp AS rb ON ab.model_b = rb.created_by_model AND p.prompt_id = rb.prompt_id
-        JOIN benchmark AS b ON p.benchmark_id = b.benchmark_id
+        CROSS JOIN prompt AS p
+        JOIN response AS ra ON ab.model_a = ra.created_by_model AND p.prompt_id = ra.prompt_id
+        JOIN response AS rb ON ab.model_b = rb.created_by_model AND p.prompt_id = rb.prompt_id
         CROSS JOIN model as em
     WHERE
-        b.benchmark_name = '{benchmark_name}'
-        AND ma.use_in_ab_tests = TRUE
-        AND mb.use_in_ab_tests = TRUE
-        AND em.model_name = '{eval_model_name}'
+        em.model_name = '{eval_model_name}'
         AND NOT EXISTS (SELECT e.prompt_id, e.ab_test_id
                        FROM   eval_by_model AS e
                             JOIN model AS m ON e.submitted_by = m.model_id
@@ -701,3 +693,23 @@ def insert_evals_by_model_into_db(evals_by_model: list[dict]):
         db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
     )
     return len(evals_by_model)
+
+
+async def get_battles_for_eval_model(eval_model_name: str):
+    sql_select_from = f"""
+       SELECT
+            ma.model_name AS model_a_name,
+            mb.model_name AS model_b_name,
+            mw.model_name AS selected_model_name,
+            ebm.submitted_at,
+       FROM
+           eval_by_model as ebm
+           JOIN model AS ma ON ebm.model_a = ma.model_id
+           JOIN model AS mb ON ebm.model_b = mb.model_id
+           JOIN model AS mw ON ebm.selected_model = mw.model_id
+           JOIN model AS me ON ebm.submitted_by = me.model_id
+       WHERE
+           me.model_name = '{eval_model_name}'
+    """
+    rows = await select_from(db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from)
+    return rows
