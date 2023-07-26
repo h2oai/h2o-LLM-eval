@@ -1,6 +1,6 @@
-from utils import read_json, read_jsonl, write_json, write_jsonl
-from prompt_templates import SYSTEM_PROMPT, USER_PROMPT
+from .prompt_templates import SYSTEM_PROMPT, USER_PROMPT
 import json
+import datetime
 
 
 def db_game_to_dict(row: tuple) -> dict:
@@ -16,9 +16,10 @@ def db_game_to_dict(row: tuple) -> dict:
         "response_a_text": row[8],
         "response_b_id": row[9],
         "response_b_text": row[10],
-        "prompt_text": row[11],
-        "eval_model_id": row[12],
-        "eval_model_name": row[13],
+        "prompt_id": row[11],
+        "prompt_text": row[12],
+        "eval_model_id": row[13],
+        "eval_model_name": row[14],
     }
 
 
@@ -50,7 +51,7 @@ def games_list_to_lookup(games: list[dict]) -> dict:
     return lookup
 
 
-def parse_result(result: tuple[dict], games_lookup: dict) -> dict:
+def parse_result_to_battle(result: tuple[dict], games_lookup: dict) -> dict:
     input, output = result
     game_id = input["user"]
     game = games_lookup[game_id]
@@ -111,22 +112,20 @@ def parse_result(result: tuple[dict], games_lookup: dict) -> dict:
 def battle_to_eval_entry(battle: dict, games_lookup: dict) -> dict:
     game = games_lookup[battle["game_id"]]
     eval_entry = {
-        dict(
-            ab_test_id=game["ab_test_id"],
-            model_a=game["model_a_id"],
-            model_b=game["model_b_id"],
-            prompt_id=game["prompt_id"],
-            submitted_by=game["eval_model_id"],
-            selected_model=game["model_a_id"] if battle["win"] == game["model_a_name"] else game["model_b_id"],
-            other_response=battle["other_response"],
-            additional_feedback=battle["additional_feedback"],
-            prompt_tokens=battle["prompt_tokens"],
-            response_tokens=battle["response_tokens"],
-            model_a_score=battle["score_a"],
-            model_b_score=battle["score_b"],
-            best_answer=None,
-            submitted_at=battle["submitted_at"],
-        )
+        "ab_test_id": game["ab_test_id"],
+        "model_a": game["model_a_id"],
+        "model_b": game["model_b_id"],
+        "prompt_id": game["prompt_id"],
+        "submitted_by": game["eval_model_id"],
+        "selected_model": game["model_a_id"] if battle["win"] == game["model_a_name"] else game["model_b_id"],
+        "other_response": battle["other_response"],
+        "additional_feedback": battle["additional_feedback"],
+        "prompt_tokens": battle["prompt_tokens"],
+        "response_tokens": battle["response_tokens"],
+        "model_a_score": battle["score_a"],
+        "model_b_score": battle["score_b"],
+        "best_answer": None,
+        "submitted_at": datetime.datetime.fromtimestamp(battle["submitted_at"]),
     }
     return eval_entry
 

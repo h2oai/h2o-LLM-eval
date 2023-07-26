@@ -10,6 +10,7 @@ from .psql_utils import (
     PSQLConfig,
     insert_into,
     select_from,
+    insert_into_values
 )
 
 
@@ -553,6 +554,7 @@ async def get_all_unevaluated_ab_test_prompts_for_benchmark(benchmark_name: str,
         ra.response_text,
         rb.response_temp_id,
         rb.response_text,
+        p.prompt_id,
         p.prompt_text,
         em.model_id,
         em.model_name
@@ -566,10 +568,10 @@ async def get_all_unevaluated_ab_test_prompts_for_benchmark(benchmark_name: str,
         JOIN benchmark AS b ON p.benchmark_id = b.benchmark_id
         CROSS JOIN model as em
     WHERE
-        b.benchmark_name = 'v1'
+        b.benchmark_name = '{benchmark_name}'
         AND ma.use_in_ab_tests = TRUE
         AND mb.use_in_ab_tests = TRUE
-        AND em.model_name = 'gpt-4-0613'
+        AND em.model_name = '{eval_model_name}'
         AND NOT EXISTS (SELECT e.prompt_id, e.ab_test_id
                        FROM   eval_by_model AS e
                             JOIN model AS m ON e.submitted_by = m.model_id
@@ -680,3 +682,22 @@ async def is_eval_by_model_in_db(
     rows = await select_from(db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from)
     return True if rows else False
 
+
+def insert_evals_by_model_into_db(evals_by_model: list[dict]):
+    """
+    Insert new evals into database, where prompts are a list of dictionaries with a consistent set of keys.
+    """
+    for eval_by_model in evals_by_model:
+        eval_by_model["eval_by_model_id"] = uuid4()
+    cols = list(evals_by_model[0].keys())
+    for eval_by_model in evals_by_model:
+        assert cols == list(eval_by_model.keys())
+
+    cols_str = ", ".join(cols)
+    values = [tuple(eval_by_model[k] for k in cols) for eval_by_model in evals_by_model]
+
+    sql_insert_into = f"""INSERT INTO eval_by_model ({cols_str}) VALUES %s"""
+    insert_into_values(
+        db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
+    )
+    return len(evals_by_model)
