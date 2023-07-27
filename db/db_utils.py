@@ -255,6 +255,8 @@ async def get_all_model_names_ids():
         model_name
     FROM
         model
+    ORDER BY
+        elo_score DESC
     ;
     """
     rows = await select_from(
