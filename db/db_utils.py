@@ -10,6 +10,7 @@ from .psql_utils import (
     PSQLConfig,
     insert_into,
     select_from,
+    insert_into_values
 )
 
 
@@ -537,3 +538,142 @@ async def get_model_id_by_name(model_name: str) -> UUID:
         db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
     )
     return rows[0][0]
+
+
+async def get_all_unevaluated_ab_test_prompts_for_benchmark(eval_model_name: str) -> list[dict]:
+    sql_select_from = f"""
+    SELECT
+        ab.ab_test_id,
+        ab.model_a,
+        ab.model_b,
+        ra.response_id,
+        ra.response_text,
+        rb.response_id,
+        rb.response_text,
+        p.prompt_id,
+        p.prompt_text,
+        em.model_id,
+        em.model_name
+    FROM
+        ab_test AS ab
+        JOIN model AS ma ON ab.model_a = ma.model_id
+        JOIN model AS mb ON ab.model_b = mb.model_id
+        CROSS JOIN prompt AS p
+        JOIN response AS ra ON ab.model_a = ra.created_by_model AND p.prompt_id = ra.prompt_id
+        JOIN response AS rb ON ab.model_b = rb.created_by_model AND p.prompt_id = rb.prompt_id
+        CROSS JOIN model as em
+    WHERE
+        em.model_name = '{eval_model_name}'
+        AND NOT EXISTS (SELECT e.prompt_id, e.ab_test_id
+                       FROM   eval_by_model AS e
+                            JOIN model AS m ON e.submitted_by = m.model_id
+                       WHERE  e.ab_test_id = ab.ab_test_id AND
+                              e.prompt_id = p.prompt_id AND
+                              e.submitted_by = em.model_id)
+    
+    """
+    rows = await select_from(
+        db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
+    )
+    return rows
+
+
+async def insert_eval_by_model_into_db(
+    ab_test_id: UUID,
+    model_a: UUID,
+    model_b: UUID,
+    prompt_id: UUID,
+    submitted_by: UUID,
+    submitted_at: datetime,
+    selected_model: Optional[UUID] = None,
+    additional_feedback: Optional[str] = None,
+    model_a_score: Optional[int] = None,
+    model_b_score: Optional[int] = None,
+) -> UUID:
+    sql_insert_into = """
+    INSERT INTO eval_by_model (
+        eval_by_model_id,
+        ab_test_id,
+        model_a,
+        model_b,
+        prompt_id,
+        submitted_by,
+        selected_model,
+        additional_feedback,
+        model_a_score,
+        model_b_score,
+        submitted_at
+    )
+    VALUES (
+        %(eval_by_model_id)s,
+        %(ab_test_id)s,
+        %(model_a)s,
+        %(model_b)s,
+        %(prompt_id)s,
+        %(submitted_by)s,
+        %(selected_model)s,
+        %(additional_feedback)s,
+        %(model_a_score)s,
+        %(model_b_score)s,
+        %(submitted_at)s
+    );
+    """
+    eval_by_model_id = uuid4()
+    values = dict(
+        eval_by_model_id=eval_by_model_id,
+        ab_test_id=ab_test_id,
+        model_a=model_a,
+        model_b=model_b,
+        prompt_id=prompt_id,
+        submitted_by=submitted_by,
+        selected_model=selected_model,
+        additional_feedback=additional_feedback,
+        model_a_score=model_a_score,
+        model_b_score=model_b_score,
+        submitted_at=submitted_at,
+    )
+    await insert_into(
+        db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
+    )
+    return eval_by_model_id
+
+
+
+def insert_evals_by_model_into_db(evals_by_model: list[dict]):
+    """
+    Insert new evals into database, where prompts are a list of dictionaries with a consistent set of keys.
+    """
+    for eval_by_model in evals_by_model:
+        eval_by_model["eval_by_model_id"] = uuid4()
+    cols = list(evals_by_model[0].keys())
+    for eval_by_model in evals_by_model:
+        assert cols == list(eval_by_model.keys())
+
+    cols_str = ", ".join(cols)
+    values = [tuple(eval_by_model[k] for k in cols) for eval_by_model in evals_by_model]
+
+    sql_insert_into = f"""INSERT INTO eval_by_model ({cols_str}) VALUES %s"""
+    insert_into_values(
+        db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
+    )
+    return len(evals_by_model)
+
+
+async def get_battles_for_eval_model(eval_model_name: str):
+    sql_select_from = f"""
+       SELECT
+            ma.model_name AS model_a_name,
+            mb.model_name AS model_b_name,
+            mw.model_name AS selected_model_name,
+            ebm.submitted_at
+       FROM
+           eval_by_model as ebm
+           JOIN model AS ma ON ebm.model_a = ma.model_id
+           JOIN model AS mb ON ebm.model_b = mb.model_id
+           LEFT JOIN model AS mw ON ebm.selected_model = mw.model_id
+           JOIN model AS me ON ebm.submitted_by = me.model_id
+       WHERE
+           me.model_name = '{eval_model_name}'
+    """
+    rows = await select_from(db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from)
+    return rows

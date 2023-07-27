@@ -4,6 +4,10 @@ from dataclasses import asdict, dataclass
 from typing import Any, Dict
 
 import psycopg
+import psycopg2
+from psycopg2.extras import execute_values, register_uuid
+
+register_uuid()
 
 
 @dataclass
@@ -58,3 +62,16 @@ async def insert_into(
         # Open a cursor to perform database operations
         async with a_conn.cursor() as a_cur:
             await a_cur.execute(sql_insert_into, values)  # type: ignore
+
+
+def insert_into_values(
+    db_config: PSQLConfig, sql_insert_into: str, values: list[tuple]
+):
+    # Connect to an existing database
+    with psycopg2.connect(
+        **asdict(db_config)
+    ) as a_conn:
+        a_conn.autocommit = True
+        # Open a cursor to perform database operations
+        with a_conn.cursor() as a_cur:
+            execute_values(a_cur, sql_insert_into, values)  # type: ignore
