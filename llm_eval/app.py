@@ -3,7 +3,7 @@ from h2o_wave import Q, app, handle_on, main  # noqa: F401
 from loguru import logger
 
 from . import handlers  # noqa: F401
-from .initializers import initialize_app, initialize_client, initialize_user
+from .initializers import initialize_client
 from .wave_utils import handle_crash
 
 
@@ -22,8 +22,6 @@ async def serve(q: Q):
     # This will prevent the app from crashing and showing stack traces in the UI
     try:
         # Initialization
-        await initialize_app(q)
-        await initialize_user(q)
         await initialize_client(q)
 
         # Handle pre-defined actions for user input

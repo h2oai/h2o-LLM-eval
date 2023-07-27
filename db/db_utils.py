@@ -1,7 +1,6 @@
-import os
 import random
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from psycopg.rows import dict_row
@@ -20,10 +19,7 @@ async def get_random_prompt_v1():
         prompt_id,
         prompt_text
     FROM
-        prompt_v1
-        JOIN benchmark ON prompt_v1.benchmark_id = benchmark.benchmark_id
-    WHERE
-        benchmark.benchmark_name = 'v1'
+        prompt
     ORDER BY
         random()
     LIMIT
@@ -43,8 +39,6 @@ async def get_random_active_ab_test():
             model_b
         FROM
             ab_test
-        WHERE
-            is_active is TRUE
         ORDER BY
             random()
         LIMIT
@@ -62,12 +56,12 @@ async def get_responses_for_models_prompt_v1(
 ):
     sql_select_from = f"""
     SELECT
-        response_temp_id,
+        response_id,
         response_text,
         created_by_model,
         model_name,
         prompt_id
-    FROM response_temp r
+    FROM response r
         JOIN model m ON r.created_by_model = m.model_id
     WHERE
         created_by_model IN ('{model_a}', '{model_b}')
@@ -80,58 +74,15 @@ async def get_responses_for_models_prompt_v1(
     return rows
 
 
-async def get_random_prompt_ab_test_for_user_no_repeat_v1(llm_user_id: UUID):
-    benchmark_id = os.getenv("V1_BENCHMARK_ID", "")
-    sql_select_from = f"""
-    WITH non_evaluated_combinations AS (
-        SELECT
-            prompt_v1.prompt_id,
-            ab_test.ab_test_id
-        FROM
-            prompt_v1
-            CROSS JOIN ab_test
-        WHERE
-            ab_test.is_active = TRUE
-            AND prompt_v1.benchmark_id = '{benchmark_id}'
-            AND NOT EXISTS (
-                SELECT 1
-                FROM eval_by_human
-                WHERE eval_by_human.prompt_id = prompt_v1.prompt_id
-                AND eval_by_human.ab_test_id = ab_test.ab_test_id
-                AND eval_by_human.submitted_by = '{llm_user_id}'
-            )
-    )
-    SELECT
-        prompt_id,
-        ab_test_id
-    FROM
-        non_evaluated_combinations
-    ORDER BY
-        RANDOM()
-    LIMIT
-        1
-    ;
-    """
-    rows = await select_from(
-        db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
-    )
-    if rows:
-        return rows[0]
-
-
 async def get_random_prompt_ab_test_v1():
-    benchmark_id = os.getenv("V1_BENCHMARK_ID", "")
-    sql_select_from = f"""
+    sql_select_from = """
     WITH all_combinations AS (
         SELECT
-            prompt_v1.prompt_id,
+            prompt.prompt_id,
             ab_test.ab_test_id
         FROM
-            prompt_v1
+            prompt
             CROSS JOIN ab_test
-        WHERE
-            ab_test.is_active = TRUE
-            AND prompt_v1.benchmark_id = '{benchmark_id}'
     )
     SELECT
         prompt_id,
@@ -155,7 +106,7 @@ async def get_prompt_by_id_v1(prompt_id: UUID):
         prompt_id,
         prompt_text
     FROM
-        prompt_v1
+        prompt
     WHERE
         prompt_id = '{prompt_id}'
     LIMIT
@@ -173,8 +124,7 @@ async def get_ab_test_by_id(ab_test_id: UUID):
     SELECT
         ab_test_id,
         model_a,
-        model_b,
-        is_active
+        model_b
     FROM
         ab_test
     WHERE
@@ -229,13 +179,13 @@ async def get_num_games_by_model_prompt(model_id: UUID, prompt_id: UUID):
 async def get_responses_for_model_prompt_v1(model_id: UUID, prompt_id: UUID):
     sql_select_from = f"""
     SELECT
-        response_temp_id,
+        response_id,
         response_text,
         created_by_model,
         m.model_name,
         prompt_id,
-        response_received_at
-    FROM response_temp r
+        created_at
+    FROM response r
         JOIN model m ON r.created_by_model = m.model_id
     WHERE
         created_by_model = '{model_id}'
@@ -253,7 +203,7 @@ async def get_elo_scores_new():
     SELECT
         model_id,
         model_name,
-        model.hf_url AS model_hf_url,
+        model.model_url AS model_hf_url,
         elo_score,
         license,
         elo_score_delta
@@ -261,8 +211,6 @@ async def get_elo_scores_new():
         model
     WHERE
         elo_score IS NOT NULL
-        AND use_in_ab_tests IS TRUE
-        AND show_on_public_elo_lb IS TRUE
     ORDER BY
         elo_score DESC
     ;
@@ -305,12 +253,11 @@ async def get_all_model_names_ids():
     sql_select_from = """
     SELECT
         model_id,
-        model_name,
-        short_name
+        model_name
     FROM
         model
-    WHERE
-        use_in_ab_tests IS TRUE
+    ORDER BY
+        elo_score DESC
     ;
     """
     rows = await select_from(
@@ -319,17 +266,14 @@ async def get_all_model_names_ids():
     return rows
 
 
-async def get_all_prompts_sha_v1(benchmark_name: str):
-    sql_select_from = f"""
+async def get_all_prompts_sha_v1():
+    sql_select_from = """
     SELECT
         prompt_id,
         prompt_text,
         prompt_sha256
     FROM
-        prompt_v1
-        JOIN benchmark ON prompt_v1.benchmark_id = benchmark.benchmark_id
-    WHERE
-        benchmark.benchmark_name = '{benchmark_name}'
+        prompt
     ;
     """
     rows = await select_from(
@@ -339,8 +283,7 @@ async def get_all_prompts_sha_v1(benchmark_name: str):
 
 
 async def get_all_prompts_v1_with_tags():
-    benchmark_id = os.getenv("V1_BENCHMARK_ID", "")
-    sql_select_from = f"""
+    sql_select_from = """
     SELECT
         prompt_id,
         prompt_text,
@@ -348,9 +291,7 @@ async def get_all_prompts_v1_with_tags():
         tags,
         difficulty
     FROM
-        prompt_v1
-    WHERE
-        benchmark_id = '{benchmark_id}'
+        prompt
     ;
     """
     rows = await select_from(
@@ -431,10 +372,8 @@ async def get_random_ab_task_for_user():
     return random_task
 
 
-async def get_random_ab_task_for_user_no_repeat_v1(llm_user_id: UUID):
-    rand_row = await get_random_prompt_ab_test_for_user_no_repeat_v1(llm_user_id)
-    if not rand_row:
-        rand_row = await get_random_prompt_ab_test_v1()
+async def get_random_ab_task_for_user_no_repeat_v1():
+    rand_row = await get_random_prompt_ab_test_v1()
 
     prompt_id, ab_test_id = rand_row
 
@@ -447,11 +386,9 @@ async def get_random_ab_task_for_user_no_repeat_v1(llm_user_id: UUID):
 
     dice = random.random()
     if dice < 0.5:
-        ab_test_id, model_a, model_b, is_active = random_ab_test
+        ab_test_id, model_a, model_b = random_ab_test
     else:
-        ab_test_id, model_b, model_a, is_active = random_ab_test
-
-    assert is_active
+        ab_test_id, model_b, model_a = random_ab_test
 
     responses = await get_responses_for_models_prompt_v1(
         model_a=model_a, model_b=model_b, prompt_id=prompt_id
@@ -481,34 +418,25 @@ async def get_random_ab_task_for_user_no_repeat_v1(llm_user_id: UUID):
 async def insert_eval_by_human_into_db(
     ab_test_id: UUID,
     prompt_id: UUID,
-    submitted_by: UUID,
     submitted_at: datetime,
     selected_model: Optional[UUID] = None,
     other_response: Optional[str] = None,
-    flags: Optional[List[str]] = None,
-    additional_feedback: Optional[str] = None,
 ) -> UUID:
     sql_insert_into = """
     INSERT INTO eval_by_human (
         eval_by_human_id,
         ab_test_id,
         prompt_id,
-        submitted_by,
         selected_model,
         other_response,
-        flags,
-        additional_feedback,
         submitted_at
     )
     VALUES (
         %(eval_by_human_id)s,
         %(ab_test_id)s,
         %(prompt_id)s,
-        %(submitted_by)s,
         %(selected_model)s,
         %(other_response)s,
-        %(flags)s,
-        %(additional_feedback)s,
         %(submitted_at)s
     );
     """
@@ -517,11 +445,8 @@ async def insert_eval_by_human_into_db(
         eval_by_human_id=eval_by_human_id,
         ab_test_id=ab_test_id,
         prompt_id=prompt_id,
-        submitted_by=submitted_by,
         selected_model=selected_model,
         other_response=other_response,
-        flags="#".join(flags) if flags else None,
-        additional_feedback=additional_feedback,
         submitted_at=submitted_at,
     )
     await insert_into(

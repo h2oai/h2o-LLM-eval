@@ -14,7 +14,7 @@ from .layouts import get_layouts
 from .wave_utils import WhiteSpace
 
 
-def get_meta(q: Q, layouts=None):
+def get_meta(layouts=None):
     custom_css = ui.inline_stylesheet(
         content="""
             div[data-test="main"]>div {
@@ -121,13 +121,39 @@ def get_meta(q: Q, layouts=None):
     )
 
 
-async def get_header(q: Q):
+def get_header():
     return ui.header_card(
         box="header",
         title="H2O LLM Eval",
         subtitle="v0.1.0",
         image="https://wave.h2o.ai/img/h2o-logo.svg",
-        items=[],
+        items=[
+            ui.links(
+                inline=True,
+                items=[
+                    ui.link(
+                        label="GitHub",
+                        path="https://github.com/h2oai/h2o-llm-eval",
+                        target="_blank",
+                    ),
+                    ui.link(
+                        label="Blog",
+                        path="https://h2o.ai/blog/h2o-llm-evalgpt-a-comprehensive-tool-for-evaluating-large-language-models/",
+                        target="_blank",
+                    ),
+                    ui.link(
+                        label="h2oGPT",
+                        path="https://gpt.h2o.ai/",
+                        target="_blank",
+                    ),
+                    ui.link(
+                        label="H2O LLM Studio",
+                        path="https://github.com/h2oai/h2o-llmstudio",
+                        target="_blank",
+                    ),
+                ],
+            )
+        ],
         color="card",
     )
 
@@ -146,7 +172,7 @@ def get_footer():
     )
 
 
-def get_side_nav(q: Q):
+def get_side_nav():
     nav_items = [
         ui.nav_group(
             "Menu",

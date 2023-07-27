@@ -14,9 +14,9 @@ from .components import (
 
 
 async def make_base_ui(q: Q, save=False):
-    q.page["meta"] = get_meta(q)
-    q.page["header"] = await get_header(q)
-    q.page["side_nav"] = get_side_nav(q)
+    q.page["meta"] = get_meta()
+    q.page["header"] = get_header()
+    q.page["side_nav"] = get_side_nav()
     q.page["footer"] = get_footer()
 
     set_full_page_layout(q)
@@ -28,7 +28,6 @@ async def make_base_ui(q: Q, save=False):
 
 def set_full_page_layout(q: Q):
     q.page["meta"] = get_meta(
-        q,
         layouts=[
             ui.layout(
                 breakpoint="xs",
