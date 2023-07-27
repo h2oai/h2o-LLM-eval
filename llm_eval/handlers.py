@@ -105,7 +105,7 @@ async def ab_test(q: Q):
     q.page["side_nav"].value = "ab_test"
 
     if q.client.current_layout != "ab_test":
-        q.page["meta"] = get_meta(q)
+        q.page["meta"] = get_meta()
         q.client.current_layout = "ab_test"
 
     del q.page["admin_users"]
@@ -121,7 +121,6 @@ async def ab_test(q: Q):
 
 def set_full_page_layout(q: Q):
     q.page["meta"] = get_meta(
-        q,
         layouts=[
             ui.layout(
                 breakpoint="xs",
@@ -169,8 +168,6 @@ async def ab_test_result(q: Q):
     q.page["meta"].dialog = get_loading_dialog()
     await q.page.save()
 
-    submitted_by = UUID(q.user.user_id)
-
     now = datetime.now(tz=timezone.utc)
 
     if q.args.ab_test_result is not None and q.args.ab_test_result in [
@@ -190,15 +187,13 @@ async def ab_test_result(q: Q):
     eval_by_human_id = await insert_eval_by_human_into_db(
         ab_test_id=q.client.ab_test_id,
         prompt_id=q.client.prompt_id,
-        submitted_by=submitted_by,
         submitted_at=now,
         selected_model=selected_model,
         other_response=other_response,
-        flags=q.args.flags,
-        additional_feedback=q.args.additional_feedback,
     )
 
     logger.info(f"eval_by_human_id: {eval_by_human_id}")
+
     q.page["meta"].dialog = None
 
     model_a_name, model_b_name = list(q.client.model_names.values())
@@ -240,9 +235,7 @@ async def next_ab_test(q: Q):
     q.page["meta"].dialog = get_loading_dialog()
     await q.page.save()
 
-    random_task = await get_random_ab_task_for_user_no_repeat_v1(
-        llm_user_id=UUID(q.user.user_id)
-    )
+    random_task = await get_random_ab_task_for_user_no_repeat_v1()
     if not random_task:
         q.page["meta"].dialog = None
         await q.page.save()
@@ -436,7 +429,7 @@ async def admin_responses(q: Q):
                 zones=get_zones4(),
             ),
         ]
-        q.page["meta"] = get_meta(q, layouts=layouts)
+        q.page["meta"] = get_meta(layouts=layouts)
         q.client.current_layout = "admin_responses"
 
     q.page["side_nav"].value = "admin_responses"
@@ -475,7 +468,7 @@ async def admin_responses(q: Q):
     else:
         q.client.selected_model_ids_eval = q.client.selected_model_ids
 
-    prompt_rows = await get_all_prompts_sha_v1(benchmark_name="v1")
+    prompt_rows = await get_all_prompts_sha_v1()
 
     prompts = {}
     prompts_sha = {}
@@ -495,6 +488,7 @@ async def admin_responses(q: Q):
     q.client.current_prompt_idx = 0
     q.client.selected_prompt_id = q.client.prompt_ids[q.client.current_prompt_idx]
 
+    # TODO: Fix this
     q.client.eval_model_name = "gpt-4-0613"
     q.client.eval_model_id = UUID("10596d4c-4bbe-4287-b781-c4f04a13ab5d")
 

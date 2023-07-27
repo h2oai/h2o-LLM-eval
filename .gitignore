@@ -156,6 +156,7 @@ Temporary Items
 *.tar.gz
 .idea/
 .vscode/
+local/
 *.db
 *.db-shm
 *.db-wal

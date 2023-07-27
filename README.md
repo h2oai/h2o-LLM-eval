@@ -1,14 +1,23 @@
 # H2O Large Language Model (LLM) Evaluation
 
+- [H2O Large Language Model (LLM) Evaluation](#h2o-large-language-model-llm-evaluation)
+  - [What are LLMs?](#what-are-llms)
+  - [Why LLM Eval?](#why-llm-eval)
+  - [Methods for LLM evaluation](#methods-for-llm-evaluation)
+  - [Evaluation Method](#evaluation-method)
+
 ## What are LLMs?
+
 Large Language Models (LLMs) are artificial intelligence models based on transformer neural networks, designed to predict the next token in a sequence, thereby understanding and generating human-like text. Trained on vast amounts of text data, LLMs learn grammar, world knowledge, and reasoning, enabling them to perform tasks like translation, question-answering, and text summarization without additional training. Their performance can be further enhanced through techniques like few-shot prompting, fine-tuning, Instruction Tuning, and Reinforcement Learning from Human Feedback (RLHF), the latter two providing sophisticated alignment with human objectives. Notably, these models are "large" due to their enormous number of parameters, comparable to a human brain, which contributes to their advanced capabilities but also necessitates significant computational resources.
 
 ## Why LLM Eval?
+
 Evaluating large language models (LLMs) is critical to determine their performance, generalization ability, ethical implications, resource usage, and to conduct comparative analysis between different models. Not only does this gauge how well the models understand and generate language, but it also helps identify their ability to handle various tasks, measure any inadvertent generation of inappropriate content, biases, or sensitive data revelations, and understand the trade-offs between performance and computational resource usage.
 
 When evaluating LLMs, the choice of appropriate metrics, the quality and diversity of test data, considerations around fairness and bias, robustness under different conditions, and user experience play significant roles. The metrics should be fit for purpose, the test data representative of real-world inputs, and efforts should be made to measure and mitigate bias. Moreover, models should be tested for performance under adversarial attacks or out-of-distribution inputs, and user studies should be conducted to understand the model's real-world performance.
 
 ## Methods for LLM evaluation
+
 Evaluating Large Language Models (LLMs) involves a mix of methods to accurately measure performance. Automatic metrics like perplexity, accuracy, BLEU, and ROUGE scores provide a quantitative analysis, useful in tasks with ground truth criteria like translation or question answering. Comprehensive frameworks such as HELM and MT-Bench are widely used for such benchmarking.
 
 When evaluating free-form text generation, where automated metrics may be ineffective or ill-specified, direct comparative measures like A/B testing and Elo scoring come into play. A/B testing contrasts blind evaluation of responses from two different models or model versions to judge which is "better". Elo scoring, inspired by chess, treats A/B comparisons like matches to compute model ratings, providing a deeper understanding of LLM performance and a means to compare models.
@@ -89,3 +98,18 @@ The template aids in formatting the questions and responses from the models in a
 ```
 
 Through this systematic methodology, the H2O LLM Evaluation scheme provides a comprehensive and fair assessment of Large Language Models.
+
+## Setup and Usage
+
+### Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/h2oai/h2o-LLM-eval.git
+```
+
+2. Install the required packages:
+
+```bash
+```
