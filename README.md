@@ -11,6 +11,7 @@ Please read the [Blog Post](https://h2o.ai/blog/h2o-llm-evalgpt-a-comprehensive-
     - [Responses](#responses)
     - [A/B Tests](#ab-tests)
 - [Local Setup](#local-setup)
+- [Reproducing Leaderboard](#reproducing-leaderboard-results)
 
 
 ## EvalGPT.ai
@@ -152,4 +153,11 @@ wave run llm_eval/app.py
 ```
 
 - Navigate to http://localhost:10101/ in your browser
+
+
+## Reproducing Leaderboard Results
+
+We provide [notebooks](notebooks) to generate leaderboard results and reproduce [evalgpt.ai](https://evalgpt.ai).
+1. Run [run_all_evaluations.ipynb](notebooks/run_all_evaluations.ipynb) to evaluate any A/B tests that have not yet been evaluated by a chosen evaluation model and insert the outcomes into the database. An A/B test is considered unevaluated by the given model if no evaluation by the model exists for the given combination of models and prompt. After adding a model, running this evaluates all A/B tests for the model against all other models.
+2. Run all cells in [calculate_elo_rating_public_leaderboard.ipynb](notebooks/calculate_elo_rating_public_leaderboard.ipynb) to get the Elo leaderboard and relevant charts given the evaluations in the database.
 
