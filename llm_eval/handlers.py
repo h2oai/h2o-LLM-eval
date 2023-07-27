@@ -559,12 +559,29 @@ async def select_models_to_compare(q: Q):
 
 @on()
 async def select_models_to_compare_now(q: Q):
-    num_max_models = 10
+    if not q.args.selected_model_ids or len(q.args.selected_model_ids) < 2:
+        q.page["meta"].dialog = ui.dialog(
+            title="Select Models",
+            closable=False,
+            blocking=True,
+            items=[
+                ui.text("Please select at least 2 models"),
+                ui.text_xl(WhiteSpace.em),
+                ui.buttons(
+                    justify="end",
+                    items=[
+                        ui.button(
+                            name="select_models_to_compare", label="Back", primary=True
+                        ),
+                        ui.button(name="close_dialog", label="Close"),
+                    ],
+                ),
+            ],
+        )
+        await q.page.save()
+        return
 
-    if q.args.selected_model_ids:
-        q.client.selected_model_ids = q.args.selected_model_ids[
-            : min(num_max_models, len(q.args.selected_model_ids))
-        ]
+    q.client.selected_model_ids = q.args.selected_model_ids
 
     q.page["meta"].dialog = get_loading_dialog()
     await q.page.save()
