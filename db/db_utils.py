@@ -9,7 +9,7 @@ from .psql_utils import (
     PSQLConfig,
     insert_into,
     select_from,
-    insert_into_values
+    sql_execute
 )
 
 
@@ -577,9 +577,11 @@ def insert_evals_by_model_into_db(evals_by_model: list[dict]):
     cols_str = ", ".join(cols)
     values = [tuple(eval_by_model[k] for k in cols) for eval_by_model in evals_by_model]
 
-    sql_insert_into = f"""INSERT INTO eval_by_model ({cols_str}) VALUES %s"""
-    insert_into_values(
-        db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
+    sql_insert_into = f"""INSERT INTO eval_by_model ({cols_str}) VALUES %s""".format(
+        ','.join([str(value) for value in values])
+    )
+    sql_execute(
+        db_config=PSQLConfig.from_env(), sql_query=sql_insert_into
     )
     return len(evals_by_model)
 
