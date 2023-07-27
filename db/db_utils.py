@@ -1,7 +1,6 @@
-import os
 import random
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from psycopg.rows import dict_row
@@ -72,45 +71,6 @@ async def get_responses_for_models_prompt_v1(
         db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
     )
     return rows
-
-
-# async def get_random_prompt_ab_test_for_user_no_repeat_v1():
-#     benchmark_id = os.getenv("V1_BENCHMARK_ID", "")
-#     sql_select_from = f"""
-#     WITH non_evaluated_combinations AS (
-#         SELECT
-#             prompt_v1.prompt_id,
-#             ab_test.ab_test_id
-#         FROM
-#             prompt_v1
-#             CROSS JOIN ab_test
-#         WHERE
-#             ab_test.is_active = TRUE
-#             AND prompt_v1.benchmark_id = '{benchmark_id}'
-#             AND NOT EXISTS (
-#                 SELECT 1
-#                 FROM eval_by_human
-#                 WHERE eval_by_human.prompt_id = prompt_v1.prompt_id
-#                 AND eval_by_human.ab_test_id = ab_test.ab_test_id
-#                 AND eval_by_human.submitted_by = '{llm_user_id}'
-#             )
-#     )
-#     SELECT
-#         prompt_id,
-#         ab_test_id
-#     FROM
-#         non_evaluated_combinations
-#     ORDER BY
-#         RANDOM()
-#     LIMIT
-#         1
-#     ;
-#     """
-#     rows = await select_from(
-#         db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
-#     )
-#     if rows:
-#         return rows[0]
 
 
 async def get_random_prompt_ab_test_v1():
@@ -410,9 +370,6 @@ async def get_random_ab_task_for_user():
 
 
 async def get_random_ab_task_for_user_no_repeat_v1():
-    # rand_row = await get_random_prompt_ab_test_for_user_no_repeat_v1()
-    # if not rand_row:
-
     rand_row = await get_random_prompt_ab_test_v1()
 
     prompt_id, ab_test_id = rand_row
