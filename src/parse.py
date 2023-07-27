@@ -8,14 +8,14 @@ def db_game_to_dict(row: tuple) -> dict:
         "ab_test_id": row[0],
         "model_a_id": row[1],
         "model_b_id": row[2],
-        "response_a_id": row[7],
-        "response_a_text": row[8],
-        "response_b_id": row[9],
-        "response_b_text": row[10],
-        "prompt_id": row[11],
-        "prompt_text": row[12],
-        "eval_model_id": row[13],
-        "eval_model_name": row[14],
+        "response_a_id": row[3],
+        "response_a_text": row[4],
+        "response_b_id": row[5],
+        "response_b_text": row[6],
+        "prompt_id": row[7],
+        "prompt_text": row[8],
+        "eval_model_id": row[9],
+        "eval_model_name": row[10],
     }
 
 
@@ -88,7 +88,6 @@ def parse_result_to_eval_entry(result: tuple[dict], games_lookup: dict) -> dict:
         "additional_feedback": reason,
         "model_a_score": score_a,
         "model_b_score": score_b,
-        "best_answer": None,
         "submitted_at": datetime.datetime.fromtimestamp(tstamp),
     }
 
@@ -98,7 +97,7 @@ def db_battle_to_dict(db_battle: list[tuple]) -> dict:
         'model_a': db_battle[0],
         'model_b': db_battle[1],
         'win': db_battle[2],
-        'submitted_at': db_battle[3],
+        'tstamp': db_battle[3],
     }
     return battle
 

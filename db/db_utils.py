@@ -540,7 +540,7 @@ async def get_model_id_by_name(model_name: str) -> UUID:
     return rows[0][0]
 
 
-async def get_all_unevaluated_ab_test_prompts_for_benchmark(benchmark_name: str, eval_model_name: str) -> list[dict]:
+async def get_all_unevaluated_ab_test_prompts_for_benchmark(eval_model_name: str) -> list[dict]:
     sql_select_from = f"""
     SELECT
         ab.ab_test_id,
@@ -586,13 +586,9 @@ async def insert_eval_by_model_into_db(
     submitted_by: UUID,
     submitted_at: datetime,
     selected_model: Optional[UUID] = None,
-    other_response: Optional[str] = None,
     additional_feedback: Optional[str] = None,
-    prompt_tokens: Optional[int] = None,
-    response_tokens: Optional[int] = None,
     model_a_score: Optional[int] = None,
     model_b_score: Optional[int] = None,
-    best_answer: Optional[str] = None,
 ) -> UUID:
     sql_insert_into = """
     INSERT INTO eval_by_model (
@@ -603,13 +599,9 @@ async def insert_eval_by_model_into_db(
         prompt_id,
         submitted_by,
         selected_model,
-        other_response,
         additional_feedback,
-        prompt_tokens,
-        response_tokens,
         model_a_score,
         model_b_score,
-        best_answer,
         submitted_at
     )
     VALUES (
@@ -620,13 +612,9 @@ async def insert_eval_by_model_into_db(
         %(prompt_id)s,
         %(submitted_by)s,
         %(selected_model)s,
-        %(other_response)s,
         %(additional_feedback)s,
-        %(prompt_tokens)s,
-        %(response_tokens)s,
         %(model_a_score)s,
         %(model_b_score)s,
-        %(best_answer)s,
         %(submitted_at)s
     );
     """
@@ -639,13 +627,9 @@ async def insert_eval_by_model_into_db(
         prompt_id=prompt_id,
         submitted_by=submitted_by,
         selected_model=selected_model,
-        other_response=other_response,
         additional_feedback=additional_feedback,
-        prompt_tokens=prompt_tokens,
-        response_tokens=response_tokens,
         model_a_score=model_a_score,
         model_b_score=model_b_score,
-        best_answer=best_answer,
         submitted_at=submitted_at,
     )
     await insert_into(
@@ -653,26 +637,6 @@ async def insert_eval_by_model_into_db(
     )
     return eval_by_model_id
 
-
-async def is_eval_by_model_in_db(
-    eval_model_id: UUID,
-    prompt_id: UUID,
-    ab_test_id: UUID,
-) -> bool:
-    sql_select_from = f"""
-    SELECT
-        *
-    FROM
-        eval_by_model
-    WHERE
-        submitted_by = '{eval_model_id}'
-        AND prompt_id = '{prompt_id}'
-        AND ab_test_id = '{ab_test_id}'
-    LIMIT
-        1;
-    """
-    rows = await select_from(db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from)
-    return True if rows else False
 
 
 def insert_evals_by_model_into_db(evals_by_model: list[dict]):
@@ -701,12 +665,12 @@ async def get_battles_for_eval_model(eval_model_name: str):
             ma.model_name AS model_a_name,
             mb.model_name AS model_b_name,
             mw.model_name AS selected_model_name,
-            ebm.submitted_at,
+            ebm.submitted_at
        FROM
            eval_by_model as ebm
            JOIN model AS ma ON ebm.model_a = ma.model_id
            JOIN model AS mb ON ebm.model_b = mb.model_id
-           JOIN model AS mw ON ebm.selected_model = mw.model_id
+           LEFT JOIN model AS mw ON ebm.selected_model = mw.model_id
            JOIN model AS me ON ebm.submitted_by = me.model_id
        WHERE
            me.model_name = '{eval_model_name}'
