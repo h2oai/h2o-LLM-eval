@@ -12,6 +12,7 @@ Please read the [Blog Post](https://h2o.ai/blog/h2o-llm-evalgpt-a-comprehensive-
     - [A/B Tests](#ab-tests)
 - [Local Setup](#local-setup)
 - [Reproducing Leaderboard](#reproducing-leaderboard-results)
+- [Roadmap](#roadmap)
 
 
 ## EvalGPT.ai
@@ -54,68 +55,71 @@ For any two selected models and the prompt, you can see the evaluation by GPT4 b
 
 ## Local Setup
 
-1. Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/h2oai/h2o-LLM-eval.git
 ```
 
-2. Setup Database
+### 2. Setup Database
 
-- Create a docker volume for the database
+#### a. Create a docker volume for the database
 
 ```bash
 docker volume create llm-eval-pg14-data
 ```
 
-- Start PostgreSQL 14 in docker
+#### b. Start PostgreSQL 14 in docker
 
 ```bash
 docker run -d --name=llm-eval-pg14 -p 5432:5432 -v llm-eval-pg14-data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=easypassword postgres:14.8-bullseye
 ```
 
-- Install PostgreSQL client
+#### c. Install PostgreSQL client
 
-On Ubuntu:
+- On Ubuntu:
 
 ```bash
 sudo apt update
 sudo apt install postgresql-client
 ```
 
-On macOS:
+- On macOS:
 
 ```bash
 brew install libpq
 echo 'export PATH="/usr/local/opt/libpq/bin:$PATH"' >> ~/.zshrc
 ```
 
-- Connect to Postgres and create a new user "maker". Use the password "easypassword" from the previous command when prompted
+#### d. Connect to Postgres and create a new user
+
+Connect to PostgreSQL and create a new user `maker`. Use the password `easypassword` from the previous command when prompted
 
 ```bash
 psql --host=localhost --port=5432 --username=postgres --password -c "CREATE ROLE maker WITH CREATEDB LOGIN PASSWORD 'makerpassword';"
 ```
 
-- Login as new user and create a database. User the password "makerpassword" from the previous command when prompted
+#### e. Login as new user and create a database
+
+Login as new user and create a database. Use the password `makerpassword` from the previous command when prompted
 
 ```bash
 psql --host=localhost --port=5432 --username=maker --password --dbname=postgres -c "CREATE DATABASE llm_eval_db;"
 ```
 
-- Check that the database is created
+#### f. Check that the database is created
 
 ```bash
 psql --host=localhost --port=5432 --username=maker --password --dbname=llm_eval_db -c "SELECT 1;"
 ```
 
-- Load the latest data dump into the database
+#### g. Load the latest data dump into the database
 
 ```bash
 gunzip -c data/llm_eval_db_dump_2023-07-26_18-54-50.sql.gz |  psql --host=localhost --port=5432 --username=maker --password --dbname=llm_eval_db
 ```
 
-
-3. Setup the environment:
+### 3. Setup the environment
 
 The setup is tested on Python 3.10
 
@@ -132,32 +136,49 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-4. Run the App
+### 4. Run the App
 
-- Rename .env.example to .env
+a. Rename .env.example to .env
 
 ```bash
 mv .env.example .env
 ```
 
-- Load the environment variables
+b. Load the environment variables
 
 ```bash
 source .env
 ```
 
-- Start the wave app
+c. Start the wave app
 
 ```bash
 wave run llm_eval/app.py
 ```
 
-- Navigate to http://localhost:10101/ in your browser
-
+d. Navigate to http://localhost:10101/ in your browser
 
 ## Reproducing Leaderboard Results
 
 We provide [notebooks](notebooks) to generate leaderboard results and reproduce [evalgpt.ai](https://evalgpt.ai).
+
 1. Run [run_all_evaluations.ipynb](notebooks/run_all_evaluations.ipynb) to evaluate any A/B tests that have not yet been evaluated by a chosen evaluation model and insert the outcomes into the database. An A/B test is considered unevaluated by the given model if no evaluation by the model exists for the given combination of models and prompt. After adding a model, running this evaluates all A/B tests for the model against all other models.
+
 2. Run all cells in [calculate_elo_rating_public_leaderboard.ipynb](notebooks/calculate_elo_rating_public_leaderboard.ipynb) to get the Elo leaderboard and relevant charts given the evaluations in the database.
 
+## Roadmap
+
+### Models
+
+1. Add [FreeWilly2](https://stability.ai/blog/freewilly-large-instruction-fine-tuned-models) to the Leaderboard
+
+### Application
+
+1. v2 architecture
+2. Option for users to submit new models
+
+### Eval
+
+1. More prompts in each category
+2. Document Q/A and Retrieval Category with ground truth
+3. Document Summarization Category
