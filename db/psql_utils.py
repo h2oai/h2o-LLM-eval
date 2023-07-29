@@ -1,5 +1,4 @@
 import os
-from configparser import ConfigParser
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, Union
 import psycopg
@@ -13,25 +12,12 @@ class PSQLConfig:
     password: str
 
     @classmethod
-    def from_file(cls, config_file: str, section: str = "postgresql"):
-        config_parser = ConfigParser()
-        config_parser.read(config_file)
-        db_config = {}
-        if config_parser.has_section(section):
-            params = config_parser.items(section)
-            for param in params:
-                db_config[param[0]] = param[1]
-        else:
-            raise Exception(f'Section "{section}" not found in the file {config_file}')
-        return PSQLConfig(**db_config)
-
-    @classmethod
     def from_env(cls):
         return PSQLConfig(
-            host=os.getenv("RDS_HOSTNAME", ""),
-            dbname=os.getenv("RDS_DB_NAME", ""),
-            user=os.getenv("RDS_USERNAME", ""),
-            password=os.getenv("RDS_PASSWORD", ""),
+            host=os.getenv("POSTGRES_HOST", ""),
+            dbname=os.getenv("POSTGRES_DB", ""),
+            user=os.getenv("POSTGRES_USER", ""),
+            password=os.getenv("POSTGRES_PASSWORD", ""),
         )
 
 

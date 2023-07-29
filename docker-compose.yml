@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "10101:10101"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=maker
+      - POSTGRES_PASSWORD=makerpassword
+      - POSTGRES_DB=llm_eval_db
+    depends_on:
+      - db
+    restart: always
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=pgpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/10_init.sql:/docker-entrypoint-initdb.d/10_init.sql
+      - db-data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  db-data:

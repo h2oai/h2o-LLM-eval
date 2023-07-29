@@ -10,6 +10,7 @@ Please read the [Blog Post](https://h2o.ai/blog/h2o-llm-evalgpt-a-comprehensive-
     - [Prompts](#prompts)
     - [Responses](#responses)
     - [A/B Tests](#ab-tests)
+- [Docker Compose Setup](#docker-compose-setup)
 - [Local Setup](#local-setup)
 - [Reproducing Leaderboard](#reproducing-leaderboard-results)
 - [Roadmap](#roadmap)
@@ -53,6 +54,23 @@ For any two selected models and the prompt, you can see the evaluation by GPT4 b
 
 ![A/B Tests](./docs/images/abtests.png)
 
+## Docker Compose Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/h2oai/h2o-LLM-eval.git
+cd h2o-LLM-eval
+```
+
+### 2. Run Docker Compose
+
+```bash
+docker compose up -d
+```
+
+Navigate to http://localhost:10101/ in your browser
+
 ## Local Setup
 
 ### 1. Clone the repository
@@ -66,13 +84,13 @@ git clone https://github.com/h2oai/h2o-LLM-eval.git
 #### a. Create a docker volume for the database
 
 ```bash
-docker volume create llm-eval-pg14-data
+docker volume create llm-eval-db-data
 ```
 
 #### b. Start PostgreSQL 14 in docker
 
 ```bash
-docker run -d --name=llm-eval-pg14 -p 5432:5432 -v llm-eval-pg14-data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=easypassword postgres:14.8-bullseye
+docker run -d --name=llm-eval-db -p 5432:5432 -v llm-eval-db-data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=pgpassword postgres:14
 ```
 
 #### c. Install PostgreSQL client
@@ -91,32 +109,10 @@ brew install libpq
 echo 'export PATH="/usr/local/opt/libpq/bin:$PATH"' >> ~/.zshrc
 ```
 
-#### d. Connect to Postgres and create a new user
-
-Connect to PostgreSQL and create a new user `maker`. Use the password `easypassword` from the previous command when prompted
+#### d. Load the latest data dump into the database
 
 ```bash
-psql --host=localhost --port=5432 --username=postgres --password -c "CREATE ROLE maker WITH CREATEDB LOGIN PASSWORD 'makerpassword';"
-```
-
-#### e. Login as new user and create a database
-
-Login as new user and create a database. Use the password `makerpassword` from the previous command when prompted
-
-```bash
-psql --host=localhost --port=5432 --username=maker --password --dbname=postgres -c "CREATE DATABASE llm_eval_db;"
-```
-
-#### f. Check that the database is created
-
-```bash
-psql --host=localhost --port=5432 --username=maker --password --dbname=llm_eval_db -c "SELECT 1;"
-```
-
-#### g. Load the latest data dump into the database
-
-```bash
-gunzip -c data/llm_eval_db_dump_2023-07-26_18-54-50.sql.gz |  psql --host=localhost --port=5432 --username=maker --password --dbname=llm_eval_db
+PGPASSWORD=pgpassword psql --host=localhost --port=5432 --username=postgres < data/10_init.sql
 ```
 
 ### 3. Setup the environment
@@ -138,25 +134,11 @@ pip install -r requirements.txt
 
 ### 4. Run the App
 
-a. Rename .env.example to .env
-
 ```bash
-mv .env.example .env
+POSTGRES_HOST=localhost POSTGRES_USER=maker POSTGRES_PASSWORD=makerpassword POSTGRES_DB=llm_eval_db H2O_WAVE_NO_LOG=true wave run llm_eval/app.py
 ```
 
-b. Load the environment variables
-
-```bash
-source .env
-```
-
-c. Start the wave app
-
-```bash
-wave run llm_eval/app.py
-```
-
-d. Navigate to http://localhost:10101/ in your browser
+Navigate to http://localhost:10101/ in your browser
 
 ## Reproducing Leaderboard Results
 

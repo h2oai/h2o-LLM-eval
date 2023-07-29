@@ -495,7 +495,7 @@ async def get_all_unevaluated_ab_test_prompts_for_benchmark(eval_model_name: str
                        WHERE  e.ab_test_id = ab.ab_test_id AND
                               e.prompt_id = p.prompt_id AND
                               e.submitted_by = em.model_id)
-    
+
     """
     rows = await select_from(
         db_config=PSQLConfig.from_env(), sql_select_from=sql_select_from
