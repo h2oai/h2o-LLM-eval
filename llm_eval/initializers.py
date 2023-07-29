@@ -1,5 +1,4 @@
 from h2o_wave import Q
-from loguru import logger
 
 from .common import make_base_ui
 
@@ -7,8 +6,6 @@ from .common import make_base_ui
 async def initialize_client(q: Q):
     if q.client.initialized:
         return
-
-    logger.info("Initializing Client")
 
     # Perform all initialization specific to this app
     q.client.current_layout = "admin"
