@@ -564,7 +564,7 @@ async def insert_eval_by_model_into_db(
 
 
 
-def insert_evals_by_model_into_db(evals_by_model: list[dict]):
+async def insert_evals_by_model_into_db(evals_by_model: list[dict]):
     """
     Insert new evals into database, where prompts are a list of dictionaries with a consistent set of keys.
     """
@@ -575,13 +575,17 @@ def insert_evals_by_model_into_db(evals_by_model: list[dict]):
         assert cols == list(eval_by_model.keys())
 
     cols_str = ", ".join(cols)
-    values = [tuple(eval_by_model[k] for k in cols) for eval_by_model in evals_by_model]
+    values = []
+    for value in evals_by_model:
+        values += [value[k] for k in cols]
 
-    sql_insert_into = f"""INSERT INTO eval_by_model ({cols_str}) VALUES %s""".format(
-        ','.join([str(value) for value in values])
-    )
-    sql_execute(
-        db_config=PSQLConfig.from_env(), sql_query=sql_insert_into
+    placeholder_str = f"""({", ".join("%s" for _ in cols)})"""
+    sql_insert_into = f"""
+    INSERT INTO eval_by_model ({cols_str}) 
+    VALUES {', '.join([placeholder_str for _ in range(len(evals_by_model))])}
+    """
+    await insert_into(
+        db_config=PSQLConfig.from_env(), sql_insert_into=sql_insert_into, values=values
     )
     return len(evals_by_model)
 
