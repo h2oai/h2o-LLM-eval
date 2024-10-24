@@ -12,14 +12,14 @@ loguru = "^0.7.0"
 psycopg = { extras = ["binary"], version = "^3.1.9" }
 emoji = "^2.2.0"
 h2o-wave = "^0.26.1"
-jupyterlab = "^4.0.3"
+jupyterlab = "^4.2.5"
 ipywidgets = "^8.0.7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = { version = "^7.3.2", allow-prereleases = true }
 pylint = { version = "^3.0.0a6", allow-prereleases = true }
 flake8 = { version = "^6.0.0", allow-prereleases = true }
-black = { extras = ["d"], version = "^23.3.0", allow-prereleases = true }
+black = { extras = ["d"], version = "^24.3.0", allow-prereleases = true }
 
 [tool.black]
 line-length = 88
